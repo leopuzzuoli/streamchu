@@ -26,5 +26,5 @@ module.exports.connect = () => {
 
 module.exports.checkforcleaninput = (str) =>{
   let unallowed = []
-  return True;
+  return true;
 }
