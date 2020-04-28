@@ -27,7 +27,7 @@ module.exports.connect = () => {
 }
 
 module.exports.checkforcleaninput = (str) => {
-  const regex = /^[a-zA-Z]+$/g;
+  const regex = /^[a-zA-Z0-9]+$/g;
   let found = str.match(regex);
 
   if (found !== null && found.length === 1) {

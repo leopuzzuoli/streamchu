@@ -1,9 +1,9 @@
-let express = require("express")
-let crypto = require("crypto")
+let express = require("express");
+let crypto = require("crypto");
 let readline = require("readline");
-let database = require("./database.js")
+let database = require("./database.js");
 
-let app = express()
+let app = express();
 
 //define app as using JSON
 app.use(express.json());
@@ -18,7 +18,7 @@ const rl = readline.createInterface({
 });
 rl.on("close", function() {
   console.log("stopping service");
-  con.end()
+  con.end();
   process.exit(0);
 });
 
@@ -26,9 +26,9 @@ rl.on("close", function() {
 let someDate = new Date();
 let numberOfDaysToAdd = 6;
 someDate.setDate(someDate.getDate() + numberOfDaysToAdd);
-let yyyy = someDate.getFullYear()
-let mm = someDate.getMonth()
-let dd = someDate.getDate()
+let yyyy = someDate.getFullYear();
+let mm = someDate.getMonth();
+let dd = someDate.getDate();
 let expiry_date = yyyy + "/" + mm + "/" + dd;
 
 //on POST request
@@ -37,9 +37,14 @@ app.post('/', function(req, res) {
   let username = req.body.username;
   let password_unhashed = req.body.password;
 
+  console.log(username);
+  console.log(password_unhashed);
+
   //clean input
   if (database.checkforcleaninput(username) && database.checkforcleaninput(password_unhashed)) {} else {
-    res.end("Bad Input")
+    res.writeHead(401, {"content-type": "text/html"});
+    res.end("Bad Input");
+    return;
   }
 
   //create password hasher
@@ -56,9 +61,7 @@ app.post('/', function(req, res) {
 
       //create session_cookie and pass it to the user
       generateCookie((n_cookie) => {
-        console.log("NCOOK: " + n_cookie);
         database.query(`INSERT INTO stream_sessions (streamer_session, session_invalid_after, streamer_id) VALUES ('${n_cookie}', '${expiry_date}', '${streamer_id}')`, con, (result2) => {
-          console.log(result2);
           res.writeHead(200, {
             "content-type": "text/html"
           });
@@ -68,7 +71,7 @@ app.post('/', function(req, res) {
 
     } else if (result.length > 1) {
       //if something went horribly wrong - TODO: Properly report
-      console.log("WARNING: CRITICAL ERROR " + result)
+      console.log("WARNING: CRITICAL ERROR " + result);
       res.writeHead(401, {
         "content-type": "text/html"
       });
@@ -87,13 +90,11 @@ let i = 0;
 
 function generateCookie(callback) {
   let new_sess_cookie = crypto.randomBytes(16).toString('hex');
-  console.log("SC: " + new_sess_cookie);
   //check if cookie already exists
   database.query(`SELECT * FROM stream_sessions WHERE streamer_session='${new_sess_cookie}';`, con, (result3) => {
     //if no cookie is already found return it
     if (result3.length === 0) {
       i = 0;
-      console.log("return");
       return callback(new_sess_cookie);
     } else {
       if (i > 10) {
