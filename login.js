@@ -71,7 +71,7 @@ app.post('/', function(req, res) {
 
     } else if (result.length > 1) {
       //if something went horribly wrong - TODO: Properly report
-      console.log("WARNING: CRITICAL ERROR " + result);
+      console.error("WARNING: CRITICAL ERROR " + result);
       res.writeHead(401, {
         "content-type": "text/html"
       });
@@ -98,7 +98,7 @@ function generateCookie(callback) {
       return callback(new_sess_cookie);
     } else {
       if (i > 10) {
-        console.log("fatal error in cookie generation");
+        console.error("fatal error in cookie generation");
       } else {
         generateCookie(callback);
         //TODO : to be tested

@@ -1,2 +1,3 @@
 npm install express
 npm install mysql
+npm install uNetworking/uWebSockets.js#v17.4.0
