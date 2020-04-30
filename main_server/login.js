@@ -37,8 +37,8 @@ app.post('/', function(req, res) {
   let username = req.body.username;
   let password_unhashed = req.body.password;
 
-  console.log(username);
-  console.log(password_unhashed);
+  //console.log(username);
+  //console.log(password_unhashed);
 
   //clean input
   if (database.checkforcleaninput(username) && database.checkforcleaninput(password_unhashed)) {} else {

@@ -1,3 +1,5 @@
+//the process users connect to with WebSockets to get content updates
+
 require('uWebSockets.js').App().ws('/*', {
 
   /* For brevity we skip the other events */
