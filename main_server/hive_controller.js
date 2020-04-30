@@ -87,7 +87,9 @@ app.post("/stream", function(req, res, next) {
             //if no server is available
             if(server.length === 0){
               //create new EC2 instance
+                  //i do not have a clue
               //get EC2 instance IP
+               //same
               //get available resources
               //add to database
 
@@ -124,7 +126,7 @@ app.post("/stream", function(req, res, next) {
 //allocate resources
 function allocRes(IP){
   return new Promise(resolve, reject){
-
+      
   }
 }
 
