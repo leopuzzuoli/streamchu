@@ -53,7 +53,7 @@ app.post('/', function(req, res) {
   let password_hashed = sha256hasher.update(password_unhashed).digest("hex");
 
   //check if login data is correct
-  database.query(`SELECT * FROM streamers WHERE username='${username}' AND password_hash='${password_hashed}';`, con, (result) => {
+  database.query(`SELECT * FROM streamers WHERE username='${username}' AND password_hash='${password_hashed}';`, con).then((result) => {
 
     if (result.length === 1) {
       //if it is correct grab user_id
@@ -61,7 +61,7 @@ app.post('/', function(req, res) {
 
       //create session_cookie and pass it to the user
       generateCookie((n_cookie) => {
-        database.query(`INSERT INTO stream_sessions (streamer_session, session_invalid_after, streamer_id) VALUES ('${n_cookie}', '${expiry_date}', '${streamer_id}')`, con, (result2) => {
+        database.query(`INSERT INTO stream_sessions (streamer_session, session_invalid_after, streamer_id) VALUES ('${n_cookie}', '${expiry_date}', '${streamer_id}')`, con).then((result2) => {
           res.writeHead(200, {
             "content-type": "text/html"
           });
@@ -91,7 +91,7 @@ let i = 0;
 function generateCookie(callback) {
   let new_sess_cookie = crypto.randomBytes(16).toString('hex');
   //check if cookie already exists
-  database.query(`SELECT * FROM stream_sessions WHERE streamer_session='${new_sess_cookie}';`, con, (result3) => {
+  database.query(`SELECT * FROM stream_sessions WHERE streamer_session='${new_sess_cookie}';`, con).then((result3) => {
     //if no cookie is already found return it
     if (result3.length === 0) {
       i = 0;
