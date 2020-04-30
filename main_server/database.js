@@ -1,11 +1,13 @@
 let mysql = require("mysql")
 
-module.exports.query = (query, con, callback) => {
-  //requires and execute query
-  con.query(query, function(err, result, fields) {
-    if (err) throw err;
-    //return query results
-    return callback(result)
+module.exports.query = (query, con) => {
+  return new Promise((resolve, reject) => {
+    //requires and execute query
+    con.query(query, function(err, result, fields) {
+      if (err) reject(err);
+      //return query results
+      resolve(result);
+    });
   });
 }
 
