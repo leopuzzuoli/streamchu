@@ -1,21 +1,31 @@
-//the process users connect to with WebSockets to get content updates
+//the process users connect to with WebSockets to get content updates, streamer connects to different port
+let cluster = require("cluster");
+let process = require("process");
 
-require('uWebSockets.js').App().ws('/*', {
+if (cluster.isMaster) {
+process.send("started");
+//TO TST for todo in stanceMAster
+setTimeout(process.exit(1), 2000);
 
-  /* For brevity we skip the other events */
-  message: (ws, message, isBinary) => {
-    let ok = ws.send(message, isBinary);
-  }
+} else {
 
-}).any('/*', (res, req) => {
+  require('uWebSockets.js').App().ws('/*', {
 
-  /* Let's deny all Http */
-  res.end('Nothing to see here!');
+    /* For brevity we skip the other events */
+    message: (ws, message, isBinary) => {
+      let ok = ws.send(message, isBinary);
+    }
 
-}).listen(9001, (listenSocket) => {
+  }).any('/*', (res, req) => {
 
-  if (listenSocket) {
-    console.log('Listening to port 9001');
-  }
+    /* Let's deny all Http */
+    res.end('HTTP unallowed');
 
-});
+  }).listen(9001, (listenSocket) => {
+
+    if (listenSocket) {
+      console.log('Listening to port 9001');
+    }
+
+  });
+}

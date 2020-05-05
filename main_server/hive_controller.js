@@ -125,9 +125,9 @@ app.post("/stream", function(req, res, next) {
 
 //allocate resources
 function allocRes(IP){
-  return new Promise(resolve, reject){
-      
-  }
+  return new Promise((resolve, reject){
+
+  });
 }
 
 app.post("/streamended", function(req, res) {
