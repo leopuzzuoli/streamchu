@@ -2,11 +2,18 @@
 let database = require("./database.js");
 let express = require("express");
 let readline = require("readline");
+let axios = require("axios");
+let rsa = require("node-rsa");
+let path = require("path");
+const fs = require("fs");
 
 let app = express();
 
 //define app as using JSON
 app.use(express.json());
+
+//find RSA private key
+let pathtoRSA = path.resolve("..", ".." ,"pkey.key");
 
 //connect to database
 let con = database.connect();
@@ -20,6 +27,16 @@ rl.on("close", function() {
   console.log("stopping service");
   con.end();
   process.exit(0);
+});
+
+//read and create RSA key
+const key = new rsa();
+fs.readFile(pathtoRSA, function(err, data){
+  if(err){
+    throw err;
+  }
+  let keyinput = data;
+  key.importKey(keyinput);
 });
 
 //when stream is called, create new lobby
@@ -60,7 +77,7 @@ app.post("/stream", function(req, res, next) {
             //check if streamer has minutes remaining
             if (result2[0].minutes_remaining > 0) {
               //continue to next then with account data
-              return [result2[0].max_viewers,result2[0].minutes_remaining];
+              return [result2[0].max_viewers,result2[0].minutes_remaining, result2[0].display_name];
             } else {
               //continue to next as no minutes remaining
               return 0;
@@ -76,16 +93,19 @@ app.post("/stream", function(req, res, next) {
           return false;
         }
       }).then((result) => {
+        console.log("make a request " + result + " " + Array.isArray(result));
         //if true user is valid, and has minutes remaining
-        if(result.isArray()){
+        if(Array.isArray(result)){
           //extract data from result
           let max_viewers = result[0];
           let minutes_remaining = result[1];
+          let display_name = result[2];
 
           //start creating lobby
-          database.query(`SELECT * FROM resources WHERE max_viewers >= '${max_viewers}';`, con).then((server) => {
+          database.query(`SELECT * FROM resources WHERE free >= '${max_viewers}';`, con).then((server) => {
             //if no server is available
             if(server.length === 0){
+              console.log("noserver");
               //create new EC2 instance
                   //i do not have a clue
               //get EC2 instance IP
@@ -97,7 +117,7 @@ app.post("/stream", function(req, res, next) {
             }
             else{
               //grab the first available server and allocate resources
-              allocRes(server[0].ip);
+              allocRes(server[0].IP, max_viewers, minutes_remaining, display_name).then((res) => { }).catch((err) => console.log(err));
             }
           });
 
@@ -107,6 +127,7 @@ app.post("/stream", function(req, res, next) {
           res.end("Account minutes depleted");
         }
         else{
+          console.log("make a request 2");
           return;
         }
       });
@@ -124,9 +145,30 @@ app.post("/stream", function(req, res, next) {
 
 
 //allocate resources
-function allocRes(IP){
-  return new Promise((resolve, reject){
-
+function allocRes(IP, max_viewers, minutes_remaining, display_name){
+  return new Promise((resolve, reject) => {
+    console.log("make a request");
+    //sign streamer
+    let sign = key.sign(display_name);
+    //create JSON request
+    let jsonReq = {
+      max_viewers: max_viewers,
+      streamer_dn: display_name,
+      time_remaining: minutes_remaining,
+      signature: sign
+    };
+     jsonReq = JSON.stringify(jsonReq);
+    //POST to server
+    axios
+      .post(`http://${IP}:8003/allocRes`, jsonReq)
+      .then(res => {
+        console.log(`statusCode: ${res.statusCode}`)
+        console.log(res)
+      })
+      .catch(error => {
+        console.error(error)
+      })
+    //await response
   });
 }
 
