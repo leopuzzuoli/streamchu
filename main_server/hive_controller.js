@@ -13,7 +13,7 @@ let app = express();
 app.use(express.json());
 
 //find RSA private key
-let pathtoRSA = path.resolve("..", ".." ,"pkey.key");
+let pathtoRSA = path.resolve("..", "..", "pkey.key");
 
 //connect to database
 let con = database.connect();
@@ -31,8 +31,8 @@ rl.on("close", function() {
 
 //read and create RSA key
 const key = new rsa();
-fs.readFile(pathtoRSA, function(err, data){
-  if(err){
+fs.readFile(pathtoRSA, function(err, data) {
+  if (err) {
     throw err;
   }
   let keyinput = data;
@@ -41,6 +41,7 @@ fs.readFile(pathtoRSA, function(err, data){
 
 //when stream is called, create new lobby
 app.post("/stream", function(req, res, next) {
+  console.log("one request");
   let username = "";
   let sessid = "";
   //get credentials
@@ -77,7 +78,7 @@ app.post("/stream", function(req, res, next) {
             //check if streamer has minutes remaining
             if (result2[0].minutes_remaining > 0) {
               //continue to next then with account data
-              return [result2[0].max_viewers,result2[0].minutes_remaining, result2[0].display_name];
+              return [result2[0].max_viewers, result2[0].minutes_remaining, result2[0].display_name];
             } else {
               //continue to next as no minutes remaining
               return 0;
@@ -93,9 +94,23 @@ app.post("/stream", function(req, res, next) {
           return false;
         }
       }).then((result) => {
-        console.log("make a request " + result + " " + Array.isArray(result));
+        //check if streamer is already streaming
+        if (Array.isArray(result)) {
+          database.query(`SELECT * FROM streaming_on WHERE streamer_dpname = '${result[2]}';`, con).then((streamisFound) => {
+            if (streamisFound.length === 0) {
+              //all good
+            } else {
+              //do you wish to double stream:
+              res.writeHead(401, {
+                "content-type": "text/html"
+              });
+              res.end("You are already streaming");
+              return;
+            }
+          });
+        }
         //if true user is valid, and has minutes remaining
-        if(Array.isArray(result)){
+        if (Array.isArray(result)) {
           //extract data from result
           let max_viewers = result[0];
           let minutes_remaining = result[1];
@@ -104,30 +119,35 @@ app.post("/stream", function(req, res, next) {
           //start creating lobby
           database.query(`SELECT * FROM resources WHERE free >= '${max_viewers}';`, con).then((server) => {
             //if no server is available
-            if(server.length === 0){
+            if (server.length === 0) {
               console.log("noserver");
               //create new EC2 instance
-                  //i do not have a clue
+              //i do not have a clue
               //get EC2 instance IP
-               //same
+              //same
               //get available resources
               //add to database
 
               //allocate resources
-            }
-            else{
+            } else {
               //grab the first available server and allocate resources
-              allocRes(server[0].IP, max_viewers, minutes_remaining, display_name).then((res) => { }).catch((err) => console.log(err));
+              allocRes(server[0].IP, max_viewers, minutes_remaining, display_name).then((address) => {
+                //tell the streamer what ip:port to connect to
+                res.writeHead(200, {
+                  "content-type": "text/html"
+                });
+                res.end(address);
+
+              }).catch((err) => console.log(err));
             }
           });
 
-        }
-        else if (result === 0){
-          res.writeHead(401, {"content-type" : "text/html"});
+        } else if (result === 0) {
+          res.writeHead(401, {
+            "content-type": "text/html"
+          });
           res.end("Account minutes depleted");
-        }
-        else{
-          console.log("make a request 2");
+        } else {
           return;
         }
       });
@@ -144,12 +164,12 @@ app.post("/stream", function(req, res, next) {
 });
 
 
-//allocate resources
-function allocRes(IP, max_viewers, minutes_remaining, display_name){
+//allocate resources and return ip:port of streamer
+function allocRes(IP, max_viewers, minutes_remaining, display_name) {
   return new Promise((resolve, reject) => {
     console.log("make a request");
-    //sign streamer
-    let sign = key.sign(display_name);
+    //sign streamer TODO: include timestamp
+    let sign = key.sign(Buffer.from(display_name));
     //create JSON request
     let jsonReq = {
       max_viewers: max_viewers,
@@ -157,18 +177,40 @@ function allocRes(IP, max_viewers, minutes_remaining, display_name){
       time_remaining: minutes_remaining,
       signature: sign
     };
-     jsonReq = JSON.stringify(jsonReq);
+    //jsonReq = JSON.stringify(jsonReq);
     //POST to server
     axios
       .post(`http://${IP}:8003/allocRes`, jsonReq)
       .then(res => {
-        console.log(`statusCode: ${res.statusCode}`)
-        console.log(res)
+        //await response
+        console.log(`statusCode: ${res.status}`)
+        //put lobby in database in case successful
+        if (res.status === 200) {
+          //extract viewer and streamer port
+          let viewerport = res.data.port.split("v")[1];
+          let streamerport = (res.data.port.split("s")[1]).split("v")[0];
+
+          database.query(`INSERT INTO streaming_on (IP, streamer_dpname, port) VALUES ('${IP}','${display_name}','${viewerport}');`, con).then(() => {
+            //update resouces
+            database.query(`UPDATE resources SET free = '${res.data.resources}' WHERE IP = '${IP}';`, con).then(() => {
+              console.log("lobby created");
+              //return ip:port for streamer to promise caller
+              resolve(`${IP}:${streamerport}`);
+            }).catch((err) => {
+              console.log(err);
+              reject(err);
+            });
+          }).catch((err) => {
+            console.log(err);
+            reject(err);
+          });
+        }
       })
       .catch(error => {
+        //in case of error
         console.error(error)
+        reject(err);
       })
-    //await response
   });
 }
 

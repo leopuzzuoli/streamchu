@@ -30,6 +30,7 @@ let allowedPorts = [
 let occupiedPorts = [];
 //remaining cpu space
 let cpuresources = numCPUs;
+let vieweres = numCPUs * 100000; // number is allowed viewers per cpu
 
 //RSA public-key for verification
 let key = new rsa('-----BEGIN PUBLIC KEY-----\n' +
@@ -70,6 +71,7 @@ let key = new rsa('-----BEGIN PUBLIC KEY-----\n' +
         lobbys[streamer_dn].on('message', (msg) => {
           if (msg === "started") {
             cpuresources -= stream_size;
+            vieweres -= maximum_vw;
             clearTimeout(lateClear);
             resolve(t_portpair);
           } else {
@@ -98,16 +100,18 @@ let key = new rsa('-----BEGIN PUBLIC KEY-----\n' +
 
     //on allocRes
     app.post("/allocRes", function(req, res, next) {
-      console.log("req");
+      //console.log(JSON.stringify(req.body, null, 2))
       //create lobby with proper resouces
       let max_viewers;
       let streamer_dn;
       let time_remaining;
       try {
         //TODO:verify signature
-        if (key.verify(req.body.streamer_dn, req.body.signature.data)) {
-          console.log("true");
+        if (!key.verify(Buffer.from(req.body.streamer_dn), Buffer.from(req.body.signature.data))) {
+          console.log("false");
+          return;
         }
+        console.log("past this point");
         //get requested parameters
         max_viewers = req.body.max_viewers; //max viewers in the lobby
         streamer_dn = req.body.streamer_dn; // streamer display name
@@ -152,7 +156,7 @@ let key = new rsa('-----BEGIN PUBLIC KEY-----\n' +
         //answer according to protocol
         let response = {
           port: portres,
-          resources: cpuresources
+          resources: vieweres
         };
         response = JSON.stringify(response);
         res.writeHead(200, {
