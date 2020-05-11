@@ -2,8 +2,8 @@
 let cluster = require("cluster");
 let process = require("process");
 
-let viewerport = process.argv[0].split("v")[1];
-let streamerport = (process.argv[0].split("s")[1]).split("v")[0];
+let viewerport = parseInt(process.argv[2].split("v")[1]);
+let streamerport = parseInt((process.argv[2].split("s")[1]).split("v")[0]);
 
 process.send(process.argv);
 
