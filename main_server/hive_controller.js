@@ -28,6 +28,56 @@ rl.on("close", function() {
   con.end();
   process.exit(0);
 });
+rl.on("line", function(input) {
+  //if asks for all running servers
+  if(input === "list servers"){
+  database.query(`SELECT * FROM resources;`,con ).then((data) => {
+    console.log("running servers:");
+    console.log(data);
+  }).catch((err) => console.log(err));
+}
+//else if deleting of resource is requested
+else if(input.startsWith("del server")){
+  //get server ip
+  let ip = input.split("server ")[1];
+  //generate signature and timestamp
+  let ts = Date.now();
+  let sign = key.sign(Buffer.from(Date.now()));
+  //make request to server
+  axios.post(`http://${ip}:8003/allocDel`, {
+      timestamp: ts,
+      signature: sign
+    })
+    .then(res => {
+      console.log(`statusCode: ${res.status}`)
+      console.log(res)
+
+      //if request was successful
+      if(res.status === 200){
+        //TODO:close EC2 instance
+
+        //remove server from resources list
+      }
+    })
+    .catch(error => {
+      console.error(error)
+    });
+}
+//list all streams
+else if(input === "list streams"){
+  database.query(`SELECT * FROM streaming_on ORDER BY streamer_dpname;`,con ).then((data) => {
+    console.log("running streams:");
+    console.log(data);
+  }).catch((err) => console.log(err));
+}
+//delete selected stream
+else if(input.startsWith("del stream")){
+
+}
+else{
+  console.log("available options:\r\nlist servers\r\nlist streams\r\ndel server\r\ndel stream");
+}
+});
 
 //read and create RSA key
 const key = new rsa();
