@@ -1,18 +1,13 @@
 //the process users connect to with WebSockets to get content updates, streamer connects to different port
 let cluster = require("cluster");
 let process = require("process");
+let uWS = require("uWebSockets.js");
 
 let viewerport = parseInt(process.argv[2].split("v")[1]);
 let streamerport = parseInt((process.argv[2].split("s")[1]).split("v")[0]);
 
-process.send(process.argv);
-
-process.send(streamerport);
-process.send(viewerport);
-
 //IF MASTER
 if (cluster.isMaster) {
-  process.send("test started");
   //---handlers---
 
   //if sub_worker crashes or exits successfully handler
@@ -29,8 +24,11 @@ if (cluster.isMaster) {
         console.log("worker success");
       }
     });
+
+    worker.on("message", (msg) => {
+      console.log("msg: " + msg);
+    });
   });
-  process.send("test started");
   //if master crashes or exits successfully handler
   process.on("exit", (code) => {
     //if exit meant
@@ -47,7 +45,6 @@ if (cluster.isMaster) {
       //do not kick off viewers and create instant new stream master
     }
   });
-  process.send("test started");
   //on message from parent
   process.on("message", (msg) => {
     //if requested to close / exit
@@ -56,53 +53,91 @@ if (cluster.isMaster) {
       process.exit(0);
     }
   });
-  process.send("test started");
   //--- fork sub_processes ---
 
   //--- start server for streamer ---
-  require("uWebSockets.js").App().ws("/*", {
+
+  uWS.App().ws("/*", {
+    compression: 0,
+    maxPayloadLength: 16 * 1024 * 1024,
+    idleTimeout: 60,
+
+    //on open
+    open: (ws, req) => {
+      //check credentials
+
+    },
+
     //get message
     message: (ws, message, isBinary) => {
-      let ok = ws.send("200", isBinary);
-
+      console.log("FromStrem " + message);
       //if message signals to close the stream from the streamer
       if (message === "endStream") {
         process.send("end stream request");
+        uWS.us_listen_socket_close(listenSocket);
+        listenSocket = null;
+
+      } else {
+        //if message is for stream data
+        try {
+          //parse it
+          message = JSON.parse(message);
+        } catch {
+          //if parsing is unsuccessful return Bad request to streamer connection
+          ws.send("400", isBinary);
+          return;
+        }
+        //send to children
+        process.emit("update", message, ws);
+        //return ok to streamer
+        ws.write("200", isBinary)
+
       }
+    },
 
-
+    close: (ws, code, finalmsg) => {
+      //TODO: only if no more streamer websockets are open
+      process.send("end stream request");
     }
 
     //listen on streamerport
   }).listen(streamerport, (listenSocket) => {
     if (listenSocket) {
-      console.log("success");
       process.send("started");
-    }else{
-        process.send("test started5: " + streamerport);
-        process.send(listenSocket);
+    } else {
+
     }
   });
 
-  //TO TST for todo in stanceMAster
+  //just for testing
+  cluster.fork()
 
   //IF NOT MASTER
 } else {
 
   process.on("message", (msg) => {
+    console.log("message");
     if (msg === "close") {
       process.exit(0);
     }
   });
 
-  require('uWebSockets.js').App().ws('/*', {
+  process.on("update", (json, ws) => {
+    //publish update content to all connected client via streamer webSocket
+    ws.publish("stream", json);
+  });
+
+  //server for viewers to connect to
+  uWS.App().ws('/*', {
     //options
     compression: 0,
     maxPayloadLength: 16 * 1024 * 1024,
-    idleTimeout: 10,
+    idleTimeout: 60,
 
     //handler on opened
     open: (ws, req) => {
+      //authenticate as non-malicious use
+
       //listen to channel stream
       ws.subscribe('stream');
     }
@@ -111,10 +146,10 @@ if (cluster.isMaster) {
     //HTTP unallowed
     res.end('HTTP unallowed');
 
-  }).listen(9001, (listenSocket) => {
+  }).listen(viewerport, (listenSocket) => {
 
     if (listenSocket) {
-      console.log('Listening to port 9001');
+      console.log('Listening to port ' + viewerport);
     }
 
   });
