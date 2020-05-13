@@ -10,7 +10,7 @@ let streamerport = parseInt((process.argv[2].split("s")[1]).split("v")[0]);
 if (cluster.isMaster) {
   //---handlers---
 
-  //if sub_worker crashes or exits successfully handler
+  //if sub_worker crashes or exits successfully
   Object.values(cluster.workers).forEach(worker => {
     //on exit
     worker.on("exit", (code, signal) => {
@@ -25,26 +25,25 @@ if (cluster.isMaster) {
       }
     });
 
+    //received message from worker
     worker.on("message", (msg) => {
       console.log("msg: " + msg);
     });
   });
-  //if master crashes or exits successfully handler
+
+  //if master crashes or exits successfully
   process.on("exit", (code) => {
     //if exit meant
     if (code === 0) {
-      try {
-        //exit each worker
-        Object.values(cluster.workers).forEach(worker => {
-          worker.send("close");
-        });
-      } catch {
-
-      }
+      //exit each worker
+      Object.values(cluster.workers).forEach(worker => {
+        worker.send("close");
+      });
     } else {
-      //do not kick off viewers and create instant new stream master
+      //TODO: do not kick off viewers and create instant new stream master
     }
   });
+
   //on message from parent
   process.on("message", (msg) => {
     //if requested to close / exit
@@ -54,7 +53,7 @@ if (cluster.isMaster) {
     }
   });
   //--- fork sub_processes ---
-
+  //:TODO
   //--- start server for streamer ---
 
   uWS.App().ws("/*", {
@@ -64,15 +63,17 @@ if (cluster.isMaster) {
 
     //on open
     open: (ws, req) => {
-      //check credentials
+      //TODO: check credentials
 
     },
 
     //get message
     message: (ws, message, isBinary) => {
-      console.log("FromStrem " + message);
+      //convert ArrayBuffer to String
+      message = Buffer.from(message).toString("utf-8")
+
       //if message signals to close the stream from the streamer
-      if (message === "endStream") {
+      if (message === "/endStream") {
         process.send("end stream request");
         uWS.us_listen_socket_close(listenSocket);
         listenSocket = null;
@@ -87,11 +88,14 @@ if (cluster.isMaster) {
           ws.send("400", isBinary);
           return;
         }
-        //send to children
-        process.emit("update", message, ws);
+        //when above parsing successful send to children
+        Object.values(cluster.workers).forEach((worker) => {
+          worker.send({
+            "json": message
+          });
+        });
         //return ok to streamer
-        ws.write("200", isBinary)
-
+        ws.send("200", isBinary)
       }
     },
 
@@ -109,26 +113,23 @@ if (cluster.isMaster) {
     }
   });
 
-  //just for testing
-  cluster.fork()
-
   //IF NOT MASTER
 } else {
+  //required store as variable for app.publish()
+  let app = uWS.App();
 
+  //when receiving message from top codeblock process
   process.on("message", (msg) => {
-    console.log("message");
     if (msg === "close") {
       process.exit(0);
+    } else {
+      //TODO: other possibilities
+      app.publish("stream", msg.json);
     }
   });
 
-  process.on("update", (json, ws) => {
-    //publish update content to all connected client via streamer webSocket
-    ws.publish("stream", json);
-  });
-
   //server for viewers to connect to
-  uWS.App().ws('/*', {
+  app.ws('/*', {
     //options
     compression: 0,
     maxPayloadLength: 16 * 1024 * 1024,
@@ -136,7 +137,7 @@ if (cluster.isMaster) {
 
     //handler on opened
     open: (ws, req) => {
-      //authenticate as non-malicious use
+      //TODO:authenticate as non-malicious use
 
       //listen to channel stream
       ws.subscribe('stream');
@@ -151,6 +152,5 @@ if (cluster.isMaster) {
     if (listenSocket) {
       console.log('Listening to port ' + viewerport);
     }
-
   });
 }

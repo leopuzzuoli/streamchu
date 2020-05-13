@@ -23,6 +23,10 @@ lobbys.on('message', (msg) => {
     console.log("msg: " + msg);
   }
 });
+lobbys.stdout.on('data',
+    function (data) {
+        console.log('command line output: ' + data);
+    });
 //set message recieve on exit
 lobbys.on('exit', (code, signal) => {
   if (signal) {
