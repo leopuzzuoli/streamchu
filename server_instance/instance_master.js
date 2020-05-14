@@ -58,7 +58,7 @@ app.use(helmet())
 app.use(express.json())
 
 //create child process
-function createLobby(streamer_dn, stream_size, maximum_vw) {
+function createLobby(streamer_dn, stream_size, maximum_vw, sessid) {
   return new Promise((resolve, reject) => {
     //grab free t_portpair
     let t_portpair = allowedPorts.pop();
@@ -66,7 +66,7 @@ function createLobby(streamer_dn, stream_size, maximum_vw) {
     //add portpair to occupied portpairs list
     occupiedPorts.push(t_portpair);
     //send portpair, allocated CPU space and maximum conurrent conenction numbers to process
-    const parameters = [t_portpair, stream_size, maximum_vw];
+    const parameters = [t_portpair, stream_size, maximum_vw, sessid];
     const options = {
       stdio: ['pipe', 'pipe', 'pipe', 'ipc']
     };
@@ -112,6 +112,7 @@ app.post("/allocRes", function(req, res, next) {
   let max_viewers;
   let streamer_dn;
   let time_remaining;
+  let sessid;
   try {
     //verify signature
     if (!key.verify(Buffer.from(req.body.streamer_dn), Buffer.from(req.body.signature.data))) {
@@ -123,6 +124,7 @@ app.post("/allocRes", function(req, res, next) {
     max_viewers = req.body.max_viewers; //max viewers in the lobby
     streamer_dn = req.body.streamer_dn; // streamer display name
     time_remaining = req.body.time_remaining; // time budget the streamer has left
+    sessid = req.body.sessid; //session to verify the streamer by
   } catch (err) {
     console.error("Error gathering parameters: " + err);
     res.writeHead(400, {
@@ -159,7 +161,7 @@ app.post("/allocRes", function(req, res, next) {
     res.end("max_viewers too large to be allocated");
     return;
   }
-  createLobby(streamer_dn, cpualloc, max_viewers).then((portres) => {
+  createLobby(streamer_dn, cpualloc, max_viewers, sessid).then((portres) => {
     //answer according to protocol
     let response = {
       port: portres,

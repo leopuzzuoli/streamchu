@@ -130,7 +130,7 @@ app.post("/stream", function(req, res, next) {
             //check if streamer has minutes remaining
             if (result2[0].minutes_remaining > 0) {
               //continue to next then with account data
-              return [result2[0].max_viewers, result2[0].minutes_remaining, result2[0].display_name];
+              return [result2[0].max_viewers, result2[0].minutes_remaining, result2[0].display_name, sessionID];
             } else {
               //continue to next as no minutes remaining
               return 0;
@@ -167,6 +167,7 @@ app.post("/stream", function(req, res, next) {
           let max_viewers = result[0];
           let minutes_remaining = result[1];
           let display_name = result[2];
+          let sessionID = result[3];
 
           //start creating lobby
           database.query(`SELECT * FROM resources WHERE free >= '${max_viewers}';`, con).then((server) => {
@@ -183,7 +184,7 @@ app.post("/stream", function(req, res, next) {
               //allocate resources
             } else {
               //grab the first available server and allocate resources
-              allocRes(server[0].IP, max_viewers, minutes_remaining, display_name).then((address) => {
+              allocRes(server[0].IP, max_viewers, minutes_remaining, display_name, sessionID).then((address) => {
                 //tell the streamer what ip:port to connect to
                 res.writeHead(200, {
                   "content-type": "text/html"
@@ -217,7 +218,7 @@ app.post("/stream", function(req, res, next) {
 
 
 //allocate resources and return ip:port of streamer
-function allocRes(IP, max_viewers, minutes_remaining, display_name) {
+function allocRes(IP, max_viewers, minutes_remaining, display_name, sessID) {
   return new Promise((resolve, reject) => {
     console.log("make a request");
     //sign streamer TODO: include timestamp
@@ -227,7 +228,8 @@ function allocRes(IP, max_viewers, minutes_remaining, display_name) {
       max_viewers: max_viewers,
       streamer_dn: display_name,
       time_remaining: minutes_remaining,
-      signature: sign
+      signature: sign,
+      sessid: sessID
     };
     //jsonReq = JSON.stringify(jsonReq);
     //POST to server

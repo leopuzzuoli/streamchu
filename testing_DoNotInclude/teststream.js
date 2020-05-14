@@ -6,9 +6,10 @@ const program = path.resolve(".." ,"server_instance" ,'./stream.js');
 let t_portpair = "s8913v8914";
 let stream_size = 2;
 let maximum_vw = 10000;
+let sessid = "00050ab05fdd2f6488bf1ecacb2b233f";
 
 //send portpair, allocated CPU space and maximum conurrent conenction numbers to process
-const parameters = [t_portpair, stream_size, maximum_vw];
+const parameters = [t_portpair, stream_size, maximum_vw, sessid];
 const options = {
   stdio: ['pipe', 'pipe', 'pipe', 'ipc']
 };

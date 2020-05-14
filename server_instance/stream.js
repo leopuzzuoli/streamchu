@@ -53,7 +53,16 @@ if (cluster.isMaster) {
     }
   });
   //--- fork sub_processes ---
-  //:TODO
+  //if allocated res only 0.5 still generate one process
+  let allocated = parseInt(process.argv[3]);
+  if (allocated < 1) {
+    cluster.fork();
+  } else if (1 <= allocated && allocated <= 4) {
+    //spawn multiple processes according to allocated CPUS
+    for (var i = 0; i < allocated; i++) {
+      cluster.fork();
+    }
+  }
   //--- start server for streamer ---
 
   uWS.App().ws("/*", {
@@ -63,14 +72,31 @@ if (cluster.isMaster) {
 
     //on open
     open: (ws, req) => {
-      //TODO: check credentials
-
+      //check credentials
+      let query = req.getQuery();
+      //validate query as not having malicious input
+      if (checkforcleaninput(query)) {
+        //token is the right part of the query string
+        let token = query.split("=")[1];
+        //check token for validity
+        if(token === process.argv[5]){
+          //token is valid
+        }
+        else{
+          //query token does not match streamer token
+          ws.end("token invalid");
+        }
+      } else {
+        //invalid input, do not bother to respond as is probably fingerprinting attempt
+        ws.close();
+        return;
+      }
     },
 
     //get message
     message: (ws, message, isBinary) => {
       //convert ArrayBuffer to String
-      message = Buffer.from(message).toString("utf-8")
+      message = Buffer.from(message).toString("utf-8");
 
       //if message signals to close the stream from the streamer
       if (message === "/endStream") {
@@ -152,4 +178,18 @@ if (cluster.isMaster) {
       console.log('Listening to port ' + viewerport);
     }
   });
+}
+
+//if string only contains letters, numbers and =
+function checkforcleaninput(str) {
+  const regex = /^[a-zA-Z0-9=]+$/g;
+  let found = str.match(regex);
+
+  if (found !== null && found.length === 1) {
+    if (found[0] === str) {
+      return true;
+    }
+  }
+
+  return false;
 }
