@@ -143,7 +143,6 @@ if (cluster.isMaster) {
       ws.subscribe('stream');
     }
   }).any('/*', (res, req) => {
-
     //HTTP unallowed
     res.end('HTTP unallowed');
 

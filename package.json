@@ -1,0 +1,27 @@
+{
+  "name": "streamchu",
+  "version": "1.0.0",
+  "description": "Stream copyrighted videos over Twitch without copyright infringement",
+  "main": "none",
+  "scripts": {
+    "test": "ls"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/k783s4/streamchu.git"
+  },
+  "author": "Leonardo Puzzuoli",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/k783s4/streamchu/issues"
+  },
+  "homepage": "https://github.com/k783s4/streamchu#readme",
+  "dependencies": {
+    "axios": "^0.19.2",
+    "express": "^4.17.1",
+    "helmet": "^3.22.0",
+    "mysql": "^2.18.1",
+    "node-rsa": "^1.0.8",
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v17.4.0"
+  }
+}

@@ -2,11 +2,13 @@ let express = require("express");
 let crypto = require("crypto");
 let readline = require("readline");
 let database = require("./database.js");
+let helmet = require("helmet");
 
 let app = express();
 
-//define app as using JSON
+//define app as using JSON and helmet
 app.use(express.json());
+app.use(helmet())
 
 //connect to database
 let con = database.connect();

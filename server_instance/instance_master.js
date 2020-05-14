@@ -5,6 +5,8 @@ const program = path.resolve('./stream.js');
 const numCPUs = require('os').cpus().length;
 const express = require("express");
 const rsa = require("node-rsa");
+const helmet = require("helmet");
+var compression = require('compression');
 
 //array containing references to stream_master processes
 lobbys = {}
@@ -49,8 +51,10 @@ let key = new rsa('-----BEGIN PUBLIC KEY-----\n' +
   '-----END PUBLIC KEY-----');
 
 
-//define app as using JSON
+//define app as using JSON, helmet and compression
 let app = express()
+app.use(compression())
+app.use(helmet())
 app.use(express.json())
 
 //create child process

@@ -6,11 +6,13 @@ let axios = require("axios");
 let rsa = require("node-rsa");
 let path = require("path");
 const fs = require("fs");
+let helmet = require("helmet");
 
 let app = express();
 
-//define app as using JSON
+//define app as using JSON and helmet
 app.use(express.json());
+app.use(helmet());
 
 //find RSA private key
 let pathtoRSA = path.resolve("..", "..", "pkey.key");
