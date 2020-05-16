@@ -1,7 +1,8 @@
 let assert = require("assert");
+var sinon = require("sinon");
 
 describe("instance_master", () => {
-  decribe("#createLobby", () => {
+  describe("#createLobby", () => {
     //mock cluster
     it("all correct - return t_portpair", () => {
       assert(true);
