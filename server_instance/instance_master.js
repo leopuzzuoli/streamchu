@@ -105,7 +105,6 @@ function createLobby(streamer_dn, stream_size, maximum_vw, sessid) {
       } else if (code !== 0) {
         console.log(`worker exited with error code: ${code}`);
         clearTimeout(lateClear);
-        //TODO: might be a problem if rejected after resolve has already been called
         reject(code);
       } else {
         console.log('worker success!');
@@ -252,6 +251,7 @@ app.post("/allocDel", (req, res) => {
     if ((Date.now() - 10) < req.body.timestamp) { //if within 10 seconds of request signature
       if (!publicKey.verify(Buffer.from(req.body.timestamp), Buffer.from(req.body.signature.data))) {
         console.log("false");
+        res.end();
         return;
       }
       console.log("past this point");
