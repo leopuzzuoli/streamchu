@@ -6,6 +6,8 @@ let uWS = require("uWebSockets.js");
 let viewerport = parseInt(process.argv[2].split("v")[1]);
 let streamerport = parseInt((process.argv[2].split("s")[1]).split("v")[0]);
 
+let listenSocket;
+
 //IF MASTER
 if (cluster.isMaster) {
   //---handlers---
@@ -131,8 +133,9 @@ if (cluster.isMaster) {
     }
 
     //listen on streamerport
-  }).listen(streamerport, (listenSocket) => {
-    if (listenSocket) {
+  }).listen(streamerport, (_listenSocket) => {
+    if (_listenSocket) {
+      let listenSocket = _listenSocket
       process.send("started");
     } else {
 

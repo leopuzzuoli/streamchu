@@ -12,7 +12,7 @@ module.exports.query = (query, con) => {
 }
 
 module.exports.connect = () => {
-  connection = mysql.createConnection({
+  let connection = mysql.createConnection({
     host: 'localhost',
     user: 'backend',
     password: '!attention3L',

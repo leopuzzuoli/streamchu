@@ -11,7 +11,7 @@ const axios = require("axios");
 
 
 //array containing references to stream_master processes
-lobbys = {}
+let lobbys = {}
 // # of cpus to be used
 const streamSize = {
   VERY_SMALL: 0.5,
@@ -223,6 +223,7 @@ app.post("/allocRes", function(req, res, next) {
     return;
   }
 
+let cpualloc;
   //allocate cpu space
   if (max_viewers <= 500) {
     cpualloc = streamSize.VERY_SMALL;

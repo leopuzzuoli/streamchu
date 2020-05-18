@@ -122,7 +122,7 @@ fs.readFile(pathtoRSA, function(err, data) {
 app.post("/stream", function(req, res, next) {
   console.log("one request");
   let username = "";
-  let sessid = "";
+  let sessionID = "";
   //get credentials
   try {
     username = req.body.username;
@@ -290,7 +290,7 @@ function allocRes(IP, max_viewers, minutes_remaining, display_name, sessID) {
       .catch(error => {
         //in case of error
         console.error(error)
-        reject(err);
+        reject(error);
       })
   });
 }
