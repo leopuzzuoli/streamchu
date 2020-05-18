@@ -63,6 +63,9 @@ app.use(express.json())
 let privateKey;
 let own_pkey;
 
+//IP of the host process
+let hive_ip;
+
 //create child process
 function createLobby(streamer_dn, stream_size, maximum_vw, sessid) {
   return new Promise((resolve, reject) => {
@@ -77,10 +80,10 @@ function createLobby(streamer_dn, stream_size, maximum_vw, sessid) {
       stdio: ['pipe', 'pipe', 'pipe', 'ipc']
     };
     //fork the program
-    lobbys[streamer_dn] = fork(program, parameters, options);
+    lobbys[streamer_dn] = {process: fork(program, parameters, options), portpair: t_portpair, stream_size: stream_size, max_viewers: maximum_vw};
     console.log(parameters);
     //set message display on recieve
-    lobbys[streamer_dn].on('message', (msg) => {
+    lobbys[streamer_dn].process.on('message', (msg) => {
       if (msg === "started") {
         console.log("started");
         cpuresources -= stream_size;
@@ -91,15 +94,32 @@ function createLobby(streamer_dn, stream_size, maximum_vw, sessid) {
       //if message signals to close the stream
       else if (msg === "end stream request") {
         //close the child process
-        lobbys[streamer_dn].send("close");
+        lobbys[streamer_dn].process.send("close");
+        //update resources
+        vieweres += lobbys[streamer_dn].max_viewers;
+        cpuresources += lobbys[streamer_dn].stream_size;
+        //remove port from occupied ports list
+        occupiedPorts.splice(occupiedPorts.indexOf(lobbys[streamer_dn].portpair));
+        //add it to free ports
+        allowedPorts.push(lobbys[streamer_dn].portpair);
         //respond to hive_controller accoring to protocol
-
+        let jsonReq = {
+          freeres: vieweres,
+          signature: privateKey.sign(vieweres),
+          dp_name: streamer_dn
+        }
+        axios.post(`http://${hive_ip}:8002/streamended`, jsonReq)
+          .then((res) => {
+            if(res.status === 200){
+              console.log("Stream ended");
+            }
+          });
       } else {
         console.log("msg: " + msg);
       }
     });
     //set message recieve on exit
-    lobbys[streamer_dn].on('exit', (code, signal) => {
+    lobbys[streamer_dn].process.on('exit', (code, signal) => {
       if (signal) {
         console.log(`worker was killed by signal: ${signal}`);
       } else if (code !== 0) {
@@ -120,10 +140,10 @@ function createLobby(streamer_dn, stream_size, maximum_vw, sessid) {
 let init = false;
 
 //on first contact
-app.post("/init", (req, res)) {
+app.post("/init", (req, res) => {
   //check if already initialized
   if (init) {
-    res.WriteHead("403", {
+    res.writeHead("403", {
       "content-type": "text/html"
     })
     res.end("Already initialized");
@@ -131,18 +151,20 @@ app.post("/init", (req, res)) {
   }
   //verify signature
   try {
-    if ((Date.now() - 10) < req.body.timestamp) { //if within 10 seconds of request signature
-      if (!publicKey.verify(Buffer.from(req.body.timestamp), Buffer.from(req.body.signature.data))) {
+    if ((Date.now() - 10000) < parseInt(req.body.timestamp)) { //if within 10 seconds of request signature
+      if (! (publicKey.verify(req.body.timestamp, Buffer.from(req.body.signature.data)))) {
         //check failed
         console.log("false");
-        res.WriteHead("403", "content-type": "text/html");
+        res.writeHead("403", {"content-type": "text/html"});
         res.end("failed sign verification");
         return;
       }
       //check succeeded
       console.log("past this point");
+      //save address
+      hive_ip = req.connection.remoteAddress;
       //generate keypair
-      require("generateKeypair.js").generateKeys().then((keypair) => {
+      require("./generateKeypair.js").generateKeys().then((keypair) => {
         //fist the programs own public key
         own_pkey = keypair[0];
 
@@ -159,16 +181,18 @@ app.post("/init", (req, res)) {
           "content-type": "application/json"
         });
         res.end(response);
-
+        init = true;
       }).catch((err) => console.log(err));
+    }
+    else{
     }
   } catch {
     //unrelated error
-    res.WriteHead("400", "content-type": "text/html");
+    res.writeHead("400", {"content-type": "text/html"});
     res.end("Bad req");
     return;
   }
-}
+});
 
 //on allocRes
 app.post("/allocRes", function(req, res, next) {
@@ -256,7 +280,7 @@ app.post("/allocDel", (req, res) => {
       }
       console.log("past this point");
       lobbys.forEach((element) => {
-        element.send("close");
+        element.process.send("close");
       });
       //TODO: exit this instance
     }

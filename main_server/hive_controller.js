@@ -76,8 +76,35 @@ else if(input === "list streams"){
 else if(input.startsWith("del stream")){
 
 }
+else if(input.startsWith("init")){
+  //get server ip
+  let ip = input.split("init ")[1];
+  //generate signature and timestamp
+  let ts = Date.now();
+  let sign = key.sign(Buffer.from(Date.now().toString()));
+  //make request to server
+  axios.post(`http://${ip}:8003/init`, {
+      timestamp: ts,
+      signature: sign
+    })
+    .then(res => {
+      console.log(`statusCode: ${res.status}`)
+      console.log(res)
+
+      //if request was successful
+      if(res.status === 200){
+        console.log(res);
+        //update available resources in database
+        database.query(`UPDATE resources SET public_key = '${res.data.pkey}', free = '${res.data.availableResources}' WHERE IP = '${ip}';`, con).then(() => {console.log("updated");}).catch((err) => console.log(err));
+      }
+    })
+    .catch(error => {
+      console.error(error)
+    });
+
+}
 else{
-  console.log("available options:\r\nlist servers\r\nlist streams\r\ndel server\r\ndel stream");
+  console.log("available options:\r\nlist servers\r\nlist streams\r\ndel server\r\ndel stream\r\ninit");
 }
 });
 
@@ -244,7 +271,7 @@ function allocRes(IP, max_viewers, minutes_remaining, display_name, sessID) {
           let viewerport = res.data.port.split("v")[1];
           let streamerport = (res.data.port.split("s")[1]).split("v")[0];
 
-          database.query(`INSERT INTO streaming_on (IP, streamer_dpname, port) VALUES ('${IP}','${display_name}','${viewerport}');`, con).then(() => {
+          database.query(`INSERT INTO streaming_on (IP, streamer_dpname, port, started_at) VALUES ('${IP}','${display_name}','${viewerport}', '${Date.now()}');`, con).then(() => {
             //update resouces
             database.query(`UPDATE resources SET free = '${res.data.resources}' WHERE IP = '${IP}';`, con).then(() => {
               console.log("lobby created");
