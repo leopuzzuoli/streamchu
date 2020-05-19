@@ -7,6 +7,7 @@ let rsa = require("node-rsa");
 let path = require("path");
 const fs = require("fs");
 let helmet = require("helmet");
+//TODO: remove all setup functions for deployment
 
 let app = express();
 
@@ -14,115 +15,119 @@ let app = express();
 app.use(express.json());
 app.use(helmet());
 
-//find RSA private key
-let pathtoRSA = path.resolve("..", "..", "pkey.key");
+function setupKey() {
+  //find RSA private key
+  let pathtoRSA = path.resolve("..", "..", "pkey.key");
+
+  //read and create RSA key
+  const key = new rsa();
+  fs.readFile(pathtoRSA, function(err, data) {
+    if (err) {
+      throw err;
+    }
+    let keyinput = data;
+    key.importKey(keyinput);
+  });
+}
 
 //connect to database
 let con = database.connect();
 
-//set up for exit TODO: remove / rewrite completely to meet specifications
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-rl.on("close", function() {
-  console.log("stopping service");
-  con.end();
-  process.exit(0);
-});
-rl.on("line", function(input) {
-  //if asks for all running servers
-  if(input === "list servers"){
-  database.query(`SELECT * FROM resources;`,con ).then((data) => {
-    console.log("running servers:");
-    console.log(data);
-  }).catch((err) => console.log(err));
-}
-//else if deleting of resource is requested
-else if(input.startsWith("del server")){
-  //get server ip
-  let ip = input.split("server ")[1];
-  //generate signature and timestamp
-  let ts = Date.now();
-  let sign = key.sign(Buffer.from(Date.now()));
-  //make request to server
-  axios.post(`http://${ip}:8003/allocDel`, {
-      timestamp: ts,
-      signature: sign
-    })
-    .then(res => {
-      console.log(`statusCode: ${res.status}`)
-      console.log(res)
+function setuprl() {
+  //set up for exit TODO: remove / rewrite completely to meet specifications
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+  rl.on("close", function() {
+    console.log("stopping service");
+    con.end();
+    process.exit(0);
+  });
+  rl.on("line", function(input) {
+    //if asks for all running servers
+    if (input === "list servers") {
+      database.query(`SELECT * FROM resources;`, con).then((data) => {
+        console.log("running servers:");
+        console.log(data);
+      }).catch((err) => console.log(err));
+    }
+    //else if deleting of resource is requested
+    else if (input.startsWith("del server")) {
+      //get server ip
+      let ip = input.split("server ")[1];
+      //generate signature and timestamp
+      let ts = Date.now();
+      let sign = key.sign(Buffer.from(Date.now()));
+      //make request to server
+      axios.post(`http://${ip}:8003/allocDel`, {
+          timestamp: ts,
+          signature: sign
+        })
+        .then(res => {
+          console.log(`statusCode: ${res.status}`)
+          console.log(res)
 
-      //if request was successful
-      if(res.status === 200){
-        //TODO:close EC2 instance
+          //if request was successful
+          if (res.status === 200) {
+            //TODO:close EC2 instance
 
-        //remove server from resources list
-      }
-    })
-    .catch(error => {
-      console.error(error)
-    });
-}
-//list all streams
-else if(input === "list streams"){
-  database.query(`SELECT * FROM streaming_on ORDER BY streamer_dpname;`,con ).then((data) => {
-    console.log("running streams:");
-    console.log(data);
-  }).catch((err) => console.log(err));
-}
-//delete selected stream
-else if(input.startsWith("del stream")){
+            //remove server from resources list
+          }
+        })
+        .catch(error => {
+          console.error(error)
+        });
+    }
+    //list all streams
+    else if (input === "list streams") {
+      database.query(`SELECT * FROM streaming_on ORDER BY streamer_dpname;`, con).then((data) => {
+        console.log("running streams:");
+        console.log(data);
+      }).catch((err) => console.log(err));
+    }
+    //delete selected stream
+    else if (input.startsWith("del stream")) {
 
-}
-else if(input.startsWith("init")){
-  //get server ip
-  let ip = input.split("init ")[1];
-  //generate signature and timestamp
-  let ts = Date.now();
-  let sign = key.sign(Buffer.from(Date.now().toString()));
-  //make request to server
-  axios.post(`http://${ip}:8003/init`, {
-      timestamp: ts,
-      signature: sign
-    })
-    .then(res => {
-      console.log(`statusCode: ${res.status}`)
-      console.log(res)
+    } else if (input.startsWith("init")) {
+      //get server ip
+      let ip = input.split("init ")[1];
+      //generate signature and timestamp
+      let ts = Date.now();
+      let sign = key.sign(Buffer.from(Date.now().toString()));
+      //make request to server
+      axios.post(`http://${ip}:8003/init`, {
+          timestamp: ts,
+          signature: sign
+        })
+        .then(res => {
+          console.log(`statusCode: ${res.status}`)
+          console.log(res)
 
-      //if request was successful
-      if(res.status === 200){
-        console.log(res);
-        //update available resources in database
-        database.query(`UPDATE resources SET public_key = '${res.data.pkey}', free = '${res.data.availableResources}' WHERE IP = '${ip}';`, con).then(() => {console.log("updated");}).catch((err) => console.log(err));
-      }
-    })
-    .catch(error => {
-      console.error(error)
-    });
+          //if request was successful
+          if (res.status === 200) {
+            console.log(res);
+            //update available resources in database
+            database.query(`UPDATE resources SET public_key = '${res.data.pkey}', free = '${res.data.availableResources}' WHERE IP = '${ip}';`, con).then(() => {
+              console.log("updated");
+            }).catch((err) => console.log(err));
+          }
+        })
+        .catch(error => {
+          console.error(error)
+        });
 
+    } else {
+      console.log("available options:\r\nlist servers\r\nlist streams\r\ndel server\r\ndel stream\r\ninit");
+    }
+  });
 }
-else{
-  console.log("available options:\r\nlist servers\r\nlist streams\r\ndel server\r\ndel stream\r\ninit");
-}
-});
-
-//read and create RSA key
-const key = new rsa();
-fs.readFile(pathtoRSA, function(err, data) {
-  if (err) {
-    throw err;
-  }
-  let keyinput = data;
-  key.importKey(keyinput);
-});
 
 //when stream is called, create new lobby
 app.post("/stream", function(req, res, next) {
   console.log("one request");
   let username = "";
-  let sessionID = "";
+  let sessid = "";
   //get credentials
   try {
     username = req.body.username;
@@ -290,7 +295,7 @@ function allocRes(IP, max_viewers, minutes_remaining, display_name, sessID) {
       .catch(error => {
         //in case of error
         console.error(error)
-        reject(error);
+        reject(err);
       })
   });
 }
@@ -304,4 +309,13 @@ app.post("/streamended", function(req, res) {
 
   //respond
 });
-app.listen(8002, () => console.log("running"));
+let server = app.listen(8002, () => console.log("running"));
+
+
+function openServer() {
+  server.start();
+}
+
+function closeServer() {
+  server.close();
+}
