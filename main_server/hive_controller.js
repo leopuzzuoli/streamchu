@@ -311,12 +311,43 @@ function allocRes(IP, max_viewers, minutes_remaining, display_name, sessID) {
 
 app.post("/streamended", function(req, res) {
   //get credentials
-
-  //validate credentials
-
-  //update database
-
-  //respond
+  database.query(`SELECT * FROM resources WHERE IP = '${req.connection.remoteAddress}';`,con).then((entry) => {
+    //get public key of instance
+    let instance_key = new rsa(entry[0].public_key);
+    //get request parameters
+    let signature = req.body.signature;
+    let freeResources = req.body.freeres;
+    let streamer_displayName = req.body.dp_name;
+    //validate parameters as defined and non-null
+    if(typeof signature === "undefined" || !signature || typeof freeResources === "undefined" || !freeResources || typeof streamer_displayName === "undefined" || !streamer_displayName){
+        //parameters invalid, end conenction
+        res.writeHead(400, {"content-type" : "text/html"});
+        res.end("Bad parameters");
+        return;
+    }
+    //parameters valid, continue
+    //validate credentials
+    try{
+      if(instance_key.verify(Buffer.from(freeResources), Buffer.from(signature.data))){
+        //valid signature
+        //delete stream from database
+        database.query(`DELETE FROM streaming_on WHERE streamer_dpname = '${streamer_displayName}';`,con);
+        //update freeres
+        database.query(`UPDATE resources SET free = '${freeResources}' WHERE IP = '${req.connection.remoteAddress}';`,con);
+        //respond
+        res.writeHead(200, {"content-type" : "text/html"});
+        res.end("Stream officially ended");
+        return;
+      }else{
+        //invalid signature
+        res.writeHead(401, {"content-type":"text/html"});
+        res.end("Invalid signature");
+        return;
+      }
+    }catch(err){
+      console.log(err);
+    }
+  }).catch((err) => console.log(err));
 });
 let server = app.listen(8002, () => console.log("running"));
 
