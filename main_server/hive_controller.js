@@ -125,13 +125,22 @@ function setuprl() {
 
 //when stream is called, create new lobby
 app.post("/stream", function(req, res, next) {
-  console.log("one request");
   let username = "";
   let sessid = "";
   //get credentials
   try {
     username = req.body.username;
     sessionID = req.body.sessid;
+
+    //if any of the variables are undefined or empty
+    if(typeof username == "undefined" || !username || typeof sessionID == "undefined" && !sessionID){
+      console.log("Bad request");
+      res.writeHead(400, {
+        "content-type": "text/html"
+      });
+      res.end("Bad request");
+      return;
+    }
   } catch {
     //in case of error
     console.log("Bad request");
@@ -312,8 +321,11 @@ app.post("/streamended", function(req, res) {
 let server = app.listen(8002, () => console.log("running"));
 
 
-function openServer() {
-  server.start();
+function openServer(callback) {
+  server = app.listen(8002, () => {
+    callback();
+  });
+
 }
 
 function closeServer() {
