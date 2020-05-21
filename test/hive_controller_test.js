@@ -20,7 +20,7 @@ describe("hive_controller", () => {
     let open = hive.__get__("openServer");
     //stub allocRes
     let allocStub = sinon.stub().resolves("127.0.0.1:0000");
-    hive.__set__("allocRes", allocStub);
+    let allocReset = hive.__set__("allocRes", allocStub);
 
     //before each call except when first one restart server, then close it
     let firstrun = true;
@@ -39,8 +39,12 @@ describe("hive_controller", () => {
     });
     //after last close dataabse connection
     after(function(done) {
+      //end database conenction
       let db_con = hive.__get__("con");
       db_con.end();
+
+      //reset allocRes
+      allocReset();
       done();
     });
 
@@ -160,13 +164,62 @@ describe("hive_controller", () => {
     it("/stream lobby didn't start - return 503 (?)", () => {
       assert(true);
     });
-
   });
   describe("#allocRes function", () => {
-    //replace axios.post and database insertion (query)
-    it("lobby started successfully - return address, check insertions", () => {
+    let axiosStub;
+    let allocRes;
+    before((done) => {
+      allocRes = hive.__get__("allocRes");
+      //let setupKey = hive.__get__("setupKey");
+      //setupKey();
+      //replace rsa key with fake
+      let keyreplacement = {
+        sign: () => {
+          return ("signature");
+        }
+      }
+      hive.__set__("key", keyreplacement);
+      //replace axios.post and database insertion (query)
+      let resCode = 200;
+      axiosStub = {
+        post: sinon.stub().resolves({
+          status: resCode,
+          data: {
+            port: "s1892v1893",
+            resources: 20
+          }
+        })
+      }
+      hive.__set__("axios", axiosStub);
 
-      assert(true);
+      let dbStub = {
+        query: function(query, c) {
+          return new Promise((resolve, reject) => {
+            if (query.startsWith("INSERT")) {
+              resolve();
+            } else if (query.startsWith("UPDATE")) {
+              resolve();
+            }
+          });
+        }
+      };
+      hive.__set__("database", dbStub);
+      done();
+    });
+
+    it("lobby started successfully - return address, check insertions", (done) => {
+      allocRes("127.0.0.1", 2000, 20, "Laurie Breem", "01213131831893813").then((address) => {
+        expect(address === "127.0.0.1:1892");
+        let jsonReq = {
+          max_viewers: 2000,
+          streamer_dn: "Laurie Breem",
+          time_remaining: 20,
+          signature: "signaure",
+          sessid: "01213131831893813"
+        };
+        expect(axiosStub.post.getCall(0).args[0] === ["http://127.0.0.1:8003/allocRes", jsonReq]);
+        done();
+      });
     });
     it("lobby not started successfully - try again, return error", () => {
       assert(true);

@@ -15,18 +15,19 @@ let app = express();
 app.use(express.json());
 app.use(helmet());
 
+const key = new rsa();
 function setupKey() {
   //find RSA private key
   let pathtoRSA = path.resolve("..", "..", "pkey.key");
 
   //read and create RSA key
-  const key = new rsa();
   fs.readFile(pathtoRSA, function(err, data) {
     if (err) {
       throw err;
-    }
+    }else{
     let keyinput = data;
     key.importKey(keyinput);
+  }
   });
 }
 
@@ -261,7 +262,6 @@ app.post("/stream", function(req, res, next) {
 //allocate resources and return ip:port of streamer
 function allocRes(IP, max_viewers, minutes_remaining, display_name, sessID) {
   return new Promise((resolve, reject) => {
-    console.log("make a request");
     //sign streamer TODO: include timestamp
     let sign = key.sign(Buffer.from(display_name));
     //create JSON request
@@ -278,7 +278,6 @@ function allocRes(IP, max_viewers, minutes_remaining, display_name, sessID) {
       .post(`http://${IP}:8003/allocRes`, jsonReq)
       .then(res => {
         //await response
-        console.log(`statusCode: ${res.status}`)
         //put lobby in database in case successful
         if (res.status === 200) {
           //extract viewer and streamer port
