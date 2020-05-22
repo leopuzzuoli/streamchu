@@ -4,7 +4,7 @@ const fork = require('child_process').fork;
 const program = path.resolve(".." ,"server_instance" ,'./stream.js');
 
 let t_portpair = "s8913v8914";
-let stream_size = 2;
+let stream_size = 1;
 let maximum_vw = 10000;
 let sessid = "00050ab05fdd2f6488bf1ecacb2b233f";
 

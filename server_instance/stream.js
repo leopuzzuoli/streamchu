@@ -153,10 +153,12 @@ if (cluster.isMaster) {
       process.exit(0);
     } else {
       //TODO: other possibilities
+      console.log("publishing : " + JSON.stringify(msg.json));
       app.publish("stream", msg.json);
     }
   });
 
+let i = 1;
   //server for viewers to connect to
   app.ws('/*', {
     //options
@@ -166,7 +168,11 @@ if (cluster.isMaster) {
 
     //handler on opened
     open: (ws, req) => {
+      console.log("open:" + i);
+      i++;
       //TODO:authenticate as non-malicious use
+      //TODO: only if space available
+      //TODO: if time remaining
 
       //listen to channel stream
       ws.subscribe('stream');

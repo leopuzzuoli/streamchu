@@ -8,7 +8,7 @@ let path = require("path");
 const fs = require("fs");
 let helmet = require("helmet");
 //TODO: remove all setup functions for deployment
-
+//TODO: node-cache all functions thay may get accesses by processes simultaneously
 let app = express();
 
 //define app as using JSON and helmet
@@ -16,6 +16,10 @@ app.use(express.json());
 app.use(helmet());
 
 const key = new rsa();
+
+setupKey();
+setuprl();
+
 function setupKey() {
   //find RSA private key
   let pathtoRSA = path.resolve("..", "..", "pkey.key");

@@ -1,5 +1,6 @@
 let assert = require("assert");
-var sinon = require("sinon");
+let sinon = require("sinon");
+let rewire = require("rewire");
 
 describe("instance_master", () => {
   describe("#createLobby", () => {

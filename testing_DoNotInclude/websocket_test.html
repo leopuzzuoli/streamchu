@@ -1,10 +1,10 @@
 <script type= "text/javascript">
-let socket = new WebSocket("ws://127.0.0.1:8922?token=00050ab05fdd2f6488bf1ecacb2b233f");
+let socket = new WebSocket("ws://127.0.0.1:8913?token=00050ab05fdd2f6488bf1ecacb2b233f");
 
 socket.onopen = function(e) {
   alert("[open] Connection established");
   alert("Sending to server");
-  socket.send('json = {"type" : "Spotify", "sessid" : "00050ab05fdd2f6488bf1ecacb2b233f"}');
+  socket.send('{"type" : "Spotify", "sessid" : "00050ab05fdd2f6488bf1ecacb2b233f"}');
 };
 
 socket.onmessage = function(event) {
