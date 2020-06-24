@@ -13,14 +13,15 @@
 <p> Streamchu is the in-house development name for a product that would have allowed Twitch streamers to stream copyrighted content such as music or videos in their Twitch streams over a Twitch extension without having to worry about infringing on an artist's rights.<br>
 With our product we were hoping to bring an end to the reoccurring and persistent problem of copyright-infringement on Twitch with a win-win situation. One where the streamers could still enjoy content with their viewers and where the creators of such content would still be compensated for their hard work.</p>
 <p> This would have worked by "capturing" whatever it is that the streamer was currently playing on eg. Spotify, YouTube, Apple Music etc. and transmit a resource locator over our extension backend to every connected client (Twitch extension) to have the selected title play over the viewers own, private, payed for (Spotify Premium, YT Ads, etc.) connection, thus effectively paying the artist the appropriate amount based on viewership.</p>
-<p> The code in this repository is a mostly production ready (with exception of stream.js) Node.js backend that can be repurposed to function as a performant way to login users to your service, manage large clusters of Amazon EC2 / VPS instances and ensure secure communication between host and instances. The stream.js script uses the by far most performant WebSockets library available and can be repurposed as a general purpose pub-sub server or JSON API that can handle up to [1 MILLION concurrent clients.](https://medium.com/@alexhultman/millions-of-active-websockets-with-node-js-7dc575746a01)</p>
+<p> The code in this repository is a mostly production ready (with exception of stream.js) Node.js backend that can be repurposed to function as a performant way to login users to your service, manage large clusters of Amazon EC2 / VPS instances and ensure secure communication between host and instances. The stream.js script uses the by far most performant WebSockets library available and can be repurposed as a general purpose pub-sub server or JSON API that can handle up to
+<a href="https://medium.com/@alexhultman/millions-of-active-websockets-with-node-js-7dc575746a01">1 MILLION concurrent clients.</a></p>
 
 <p align="center"><h4 align="left">Installation</h4>
 <p>Installation is as following:<br><br>
 1. Clone repository<br>
 2. Copy main_server to the instance you wish to use as the controller for your instances<br>
 3. Copy server_instance to every EC2 / VPS instance<br>
-4. Install a MySQL server on the controller, see documentation.md for setup<br>
+4. Install a MySQL server on the controller, see the wiki for setup<br>
 5. Run hive_controller.js on the controller and login.js if you wish to use it<br>
 6. Run instance_master.js on the instances. The project was abandoned before this process could be automated <br>
 7. Enjoy
